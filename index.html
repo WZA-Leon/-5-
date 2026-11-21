@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1b1b2a" />
+  <title>课间十分钟 · 走廊漫步</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <button class="ui-btn corner" id="btn-fullscreen" type="button" aria-label="全屏" title="全屏">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+  </button>
+  <button class="ui-btn corner right" id="btn-sound" type="button" aria-label="声音开关" aria-pressed="true" title="声音">
+    <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-on"><path d="M4 9h3l4-4v14l-4-4H4z" /><path d="M15 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" /></svg>
+    <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-off"><path d="M4 9h3l4-4v14l-4-4H4z" /><path d="M16 9l5 6M21 9l-5 6" /></svg>
+  </button>
+
+  <main id="stage" aria-label="教室走廊游戏区域">
+    <canvas id="game" role="img" aria-label="教室背景，小学生角色可以左右移动"></canvas>
+
+    <div class="hud">
+      <div class="hud__title">课间十分钟</div>
+      <div class="hud__bar"><i id="progress-fill"></i></div>
+      <div class="hud__meta">
+        <span id="room-label">教室 1</span>
+        <span id="theme-label">午后阳光</span>
+      </div>
+    </div>
+
+    <div class="hint" id="hint">
+      <kbd>←</kbd><kbd>→</kbd> 或 <kbd>A</kbd><kbd>D</kbd> 左右走动 · <kbd>Shift</kbd> 快跑 · 下方按钮 / 触屏亦可
+    </div>
+
+    <div class="pad" id="pad">
+      <button class="pad__btn" data-dir="-1" type="button" aria-label="向左走">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7" /></svg>
+      </button>
+      <button class="pad__btn" data-dir="1" type="button" aria-label="向右走">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+      </button>
+    </div>
+
+    <div class="loading" id="loading">
+      <div class="loading__spinner"></div>
+      <p>正在布置教室…</p>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <script src="js/game.js"></script>
+</body>
+</html>

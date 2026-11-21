@@ -1,0 +1,10 @@
+__pycache__/
+venv
+temp/ 
+
+len/
+*.len
+*.txt
+*.cmd
+.vscode/
+runtime/
