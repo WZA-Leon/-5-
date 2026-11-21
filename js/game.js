@@ -79,21 +79,20 @@
   const CEIL_Y = 30;
   const FLOOR_Y = 252;
   const HERO_H = 104;
-  const HERO_W = HERO_H * (240 / 460);
+  const HERO_W = HERO_H * (320 / 460);
   const HERO_FEET = 314;
   const SPRITE_FEET_RATIO = 452 / 460; // 精灵里脚底所在的比例（离单元格顶部）
 
-  /* 精灵表：每一行是一个方向，第 0 列站立，1..3 列是一个迈步循环
-       （接触 → 经过 → 摆动，全部取自 img (1).png 的真实帧） */
-  const SPRITE_SHEETS = ['assets/hero.webp', 'assets/hero.png'];
-  const FRAME_COLS = 4;
+  /* 精灵表：17 列（0 站立，1..16 走路循环），行 0 朝右、行 1 朝左（镜像） */
+  const SPRITE_SHEETS = ['assets/hero.webp?v=36', 'assets/hero.png?v=36'];
+  const FRAME_COLS = 17;
   const FRAME_ROWS = 2;
   const IDLE_FRAME = 0;
-  const WALK_CYCLE = [1, 2, 3];
-  const CONTACT_FRAMES = [1]; // 接触帧：这只脚落地，触发脚印/脚步声
-  const STRIDE = 0.207; // 单帧时长（秒）：与移动速度成反比，脚不会打滑
-  const MIN_STRIDE = 0.13;
-  const MAX_STRIDE = 0.30;
+  const WALK_CYCLE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+  const CONTACT_FRAMES = [5, 13]; // 两脚各自落地的帧
+  const STRIDE = 0.0278; // 单帧时长（秒）：与移动速度成反比，脚不会打滑
+  const MIN_STRIDE = 0.010;
+  const MAX_STRIDE = 0.06;
   const SPEED = 150;
   const RUN_MULT = 1.7;
 
@@ -1099,8 +1098,8 @@
 
   /* ------------------------------------------------------------- 输入 --- */
   const KEYMAP = {
-    ArrowLeft: 'left', KeyA: 'left',
-    ArrowRight: 'right', KeyD: 'right',
+    ArrowLeft: 'right', KeyA: 'right',
+    ArrowRight: 'left', KeyD: 'left',
     ShiftLeft: 'run', ShiftRight: 'run',
   };
 
