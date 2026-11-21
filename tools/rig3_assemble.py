@@ -36,7 +36,7 @@ ANCHOR = {
     "arm_cuff": (30, 30),
     "leg_hip": (35, 12),
     "leg_ankle": (35, 165),
-    "shoe_ankle": (55, 15),  # 鞋顶进到裤脚里面更多，裤脚盖住鞋口
+    "shoe_ankle": (65, 15),  # v16 的状态
 }
 
 

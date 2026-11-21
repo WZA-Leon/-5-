@@ -19,6 +19,12 @@ W, H = 400, 600
 SCALE = {"head": 0.64, "torso": 0.66, "arm": 0.52, "shoe": 0.60}
 LEG_SX, LEG_SY = 0.52, 0.84
 
+# 鞋位置微调（局部像素；正数 = 右/下，负数 = 左/上）
+SHOE_L_DX = 0.0
+SHOE_L_DY = 0.0
+SHOE_R_DX = 0.0
+SHOE_R_DY = 0.0
+
 
 def resize_xy(im, sx, sy):
     return cv2.resize(im, (max(1, int(round(im.shape[1] * sx))), max(1, int(round(im.shape[0] * sy)))),
@@ -46,7 +52,7 @@ def make_layers():
     sw_l = shoe_l_img.shape[1]
     shoe_l = Layer(resize(shoe_l_img, SCALE["shoe"]),
                    ((sw_l - ANCHOR["shoe_ankle"][0]) * SCALE["shoe"], ANCHOR["shoe_ankle"][1] * SCALE["shoe"]))
-    shoe_r_img = load("shoe_r")
+    shoe_r_img = cv2.flip(load("shoe_r"), 1)
     sw_r = shoe_r_img.shape[1]
     shoe_r = Layer(resize(shoe_r_img, SCALE["shoe"]),
                    ((sw_r - ANCHOR["shoe_ankle"][0]) * SCALE["shoe"], ANCHOR["shoe_ankle"][1] * SCALE["shoe"]))
@@ -111,8 +117,7 @@ def over(bg, fg):
 
 def _leg_angles(phase, amp_leg):
     leg_angle = amp_leg * math.sin(phase)
-    stance = 8.5
-    return leg_angle + stance, -leg_angle - stance
+    return -leg_angle, leg_angle
 
 
 def render_legs(phase, amp_leg=26.0):
@@ -123,9 +128,9 @@ def render_legs(phase, amp_leg=26.0):
     ankle_r = rotate_point((A["hip_r"][0], A["hip_r"][1] + A["ankle_dy"]), A["hip_r"], r_angle)
     canvas = blank()
     # 鞋和裤腿画在同一层、同一个脚踝位置；裤腿后画，裤脚盖住鞋口
-    draw(canvas, L["shoe_l"], ankle_l, 0.0)
+    draw(canvas, L["shoe_l"], (ankle_l[0] + SHOE_L_DX, ankle_l[1] + SHOE_L_DY), 0.0)
     draw(canvas, L["leg_l"], A["hip_l"], l_angle)
-    draw(canvas, L["shoe_r"], ankle_r, 0.0)
+    draw(canvas, L["shoe_r"], (ankle_r[0] + SHOE_R_DX, ankle_r[1] + SHOE_R_DY), 0.0)
     draw(canvas, L["leg_r"], A["hip_r"], r_angle)
     return canvas
 
@@ -161,10 +166,13 @@ def render_arms(phase, amp_arm=12.0, which="both"):
     L = make_layers()
     A = anchors(L)
     canvas = blank()
+    arm_up = 6.0  # 两只手整体上移
     if which in ("both", "far"):
-        draw(canvas, L["arm_l"], A["arm_l"], amp_arm * math.sin(phase))
+        draw(canvas, L["arm_l"], (A["arm_l"][0], A["arm_l"][1] - arm_up),
+             amp_arm * math.sin(phase))
     if which in ("both", "near"):
-        draw(canvas, L["arm_r"], A["arm_r"], -amp_arm * math.sin(phase))
+        draw(canvas, L["arm_r"], (A["arm_r"][0], A["arm_r"][1] - arm_up),
+             -amp_arm * math.sin(phase))
     return canvas
 
 
@@ -211,24 +219,22 @@ def main():
     frames = []
     for i in range(N):
         p = 2 * math.pi * i / N
-        legs = to_final(render_legs(p), metrics)   # 裤腿+鞋同一层
-        body = to_final(render_torso(), metrics)
+        body = to_final(render_body(p), metrics)   # 腿+鞋+躯干+头
         far = to_final(render_arms(p, which="far"), metrics)
         near = to_final(render_arms(p, which="near"), metrics)
-        # 脚底贴地：用腿/鞋的最低点，整帧上下移动
-        bottom = int(np.nonzero(legs[:, :, 3] > 0)[0].max())
+        # 脚底贴地：用身体最低点，整帧上下移动
+        bottom = int(np.nonzero(body[:, :, 3] > 0)[0].max())
         dy = 452 - bottom
         if dy:
             M = np.float32([[1, 0, 0], [0, 1, dy]])
-            for part in (legs, body, far, near):
+            for part in (body, far, near):
                 part[:] = cv2.warpAffine(part, M, (320, 460), flags=cv2.INTER_LINEAR,
                                          borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0, 0))
-        cv2.imwrite(os.path.join(OUT, f"walk_{i:02d}_legs.png"), legs)
         cv2.imwrite(os.path.join(OUT, f"walk_{i:02d}_body.png"), body)
         cv2.imwrite(os.path.join(OUT, f"walk_{i:02d}_armfar.png"), far)
         cv2.imwrite(os.path.join(OUT, f"walk_{i:02d}_armnear.png"), near)
-        # 预览：裤腿+鞋 → 远侧手 → 躯干 → 近侧手
-        frames.append(over(over(over(legs, far), body), near))
+        # v16 预览：远侧手 → 身体 → 近侧手
+        frames.append(over(over(far, body), near))
 
     # 拼图预览
     strip = np.hstack([cv2.resize(f, (160, 230), interpolation=cv2.INTER_AREA) for f in frames])
