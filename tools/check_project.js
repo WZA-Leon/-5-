@@ -137,7 +137,14 @@ try {
   fail(`assets/hero.png unreadable: ${err.message}`);
 }
 
-if (!exists('assets/hero.webp')) warn('assets/hero.webp missing: game falls back to PNG');
+const webpPath = path.join(ROOT, 'assets', 'hero.webp');
+const pngPath = path.join(ROOT, 'assets', 'hero.png');
+if (!exists('assets/hero.webp')) {
+  warn('assets/hero.webp missing: game falls back to PNG (normal without ffmpeg)');
+} else if (fs.statSync(webpPath).mtimeMs < fs.statSync(pngPath).mtimeMs) {
+  // 游戏优先加载 webp；webp 比 png 旧就说明它会盖掉新构建的图
+  fail('assets/hero.webp is older than assets/hero.png: rebuild or delete it, otherwise the page shows stale art');
+}
 
 /* ------------------------------------------------------------- 输出 --- */
 for (const w of warnings) console.log('WARN', w);

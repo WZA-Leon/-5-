@@ -136,19 +136,42 @@ function legAngles(phase, ampLeg) {
   return [-legAngle, legAngle];
 }
 
-function renderLegs(phase, ampLeg = 26) {
+function renderLegsOnly(phase, ampLeg = 26) {
+  const L = makeLayers();
+  const A = anchors(L);
+  const [lAngle, rAngle] = legAngles(phase, ampLeg);
+  const canvas = blank();
+  draw(canvas, L.leg_l, A.hip_l, lAngle);
+  draw(canvas, L.leg_r, A.hip_r, rAngle);
+  return canvas;
+}
+
+/** 复制一个左右镜像的图层（pivot 也跟着翻）。 */
+function mirrorLayer(layer) {
+  const img = layer.img.flipH();
+  return new Layer(img, [img.width - layer.pivot[0], layer.pivot[1]]);
+}
+
+function renderShoes(phase, ampLeg = 26, swapOrder = false, mirrorFront = false) {
   const L = makeLayers();
   const A = anchors(L);
   const [lAngle, rAngle] = legAngles(phase, ampLeg);
   const ankleL = rotatePoint([A.hip_l[0], A.hip_l[1] + A.ankle_dy], A.hip_l, lAngle);
   const ankleR = rotatePoint([A.hip_r[0], A.hip_r[1] + A.ankle_dy], A.hip_r, rAngle);
   const canvas = blank();
-  // 鞋和裤腿画在同一层、同一个脚踝位置；裤腿后画，裤脚盖住鞋口
-  draw(canvas, L.shoe_l, [ankleL[0] + SHOE_L_DX, ankleL[1] + SHOE_L_DY], 0);
-  draw(canvas, L.leg_l, A.hip_l, lAngle);
-  draw(canvas, L.shoe_r, [ankleR[0] + SHOE_R_DX, ankleR[1] + SHOE_R_DY], 0);
-  draw(canvas, L.leg_r, A.hip_r, rAngle);
+  // swapOrder=false：先左后右，右鞋在前；swapOrder=true：先右后左，左鞋在前
+  const frontIsLeft = swapOrder;
+  const shoeL = mirrorFront && frontIsLeft ? mirrorLayer(L.shoe_l) : L.shoe_l;
+  const shoeR = mirrorFront && !frontIsLeft ? mirrorLayer(L.shoe_r) : L.shoe_r;
+  const left = () => draw(canvas, shoeL, [ankleL[0] + SHOE_L_DX, ankleL[1] + SHOE_L_DY], 0);
+  const right = () => draw(canvas, shoeR, [ankleR[0] + SHOE_R_DX, ankleR[1] + SHOE_R_DY], 0);
+  if (swapOrder) { right(); left(); } else { left(); right(); }
   return canvas;
+}
+
+function renderLegs(phase, ampLeg = 26) {
+  // 裤腿 + 两只鞋（鞋在裤腿下面，裤脚盖住鞋口）
+  return over(renderShoes(phase, ampLeg), renderLegsOnly(phase, ampLeg));
 }
 
 function renderShoe(side, phase, ampLeg = 26) {
@@ -239,27 +262,40 @@ function main() {
   for (let i = 0; i < N; i++) {
     const p = (2 * Math.PI * i) / N;
     const body = toFinal(renderBody(p), idle.metrics); // 腿+鞋+躯干+头
+    const legs = toFinal(renderLegs(p), idle.metrics); // 腿+鞋（单独一层，供左右换腿用）
+    const legsonly = toFinal(renderLegsOnly(p), idle.metrics); // 只有裤腿（不含鞋）
+    const shoes = toFinal(renderShoes(p), idle.metrics); // 只有两只鞋
+    const shoesSwap = toFinal(renderShoes(p, 26, true), idle.metrics); // 两只鞋前后层对调
+    // 静止帧用：前面那只鞋做左右镜像（其余不动）
+    const idleShoes = toFinal(renderShoes(p, 26, true, true), idle.metrics);
+    const torso = toFinal(renderTorso(), idle.metrics); // 躯干+头（单独一层）
     const far = toFinal(renderArms(p, 12, 'far'), idle.metrics);
     const near = toFinal(renderArms(p, 12, 'near'), idle.metrics);
+    const tag = String(i).padStart(2, '0');
     // 脚底贴地：用身体最低点，整帧上下移动
     const b = body.bbox(0);
     const bottom = b.y1;
     const dy = 452 - bottom;
-    if (dy) {
-      frames.push(null); // 占位，下面覆盖
-      const tb = translate(body, dy);
-      const tf = translate(far, dy);
-      const tn = translate(near, dy);
-      writeImage(path.join(OUT, `walk_${String(i).padStart(2, '0')}_body.png`), tb);
-      writeImage(path.join(OUT, `walk_${String(i).padStart(2, '0')}_armfar.png`), tf);
-      writeImage(path.join(OUT, `walk_${String(i).padStart(2, '0')}_armnear.png`), tn);
-      frames[frames.length - 1] = over(over(tf, tb), tn);
-    } else {
-      writeImage(path.join(OUT, `walk_${String(i).padStart(2, '0')}_body.png`), body);
-      writeImage(path.join(OUT, `walk_${String(i).padStart(2, '0')}_armfar.png`), far);
-      writeImage(path.join(OUT, `walk_${String(i).padStart(2, '0')}_armnear.png`), near);
-      frames.push(over(over(far, body), near));
-    }
+    const mv = (img) => (dy ? translate(img, dy) : img);
+    const tb = mv(body);
+    const tl = mv(legs);
+    const tlo = mv(legsonly);
+    const tsh = mv(shoes);
+    const tss = mv(shoesSwap);
+    const tis = mv(idleShoes);
+    const tt = mv(torso);
+    const tf = mv(far);
+    const tn = mv(near);
+    writeImage(path.join(OUT, `walk_${tag}_body.png`), tb);
+    writeImage(path.join(OUT, `walk_${tag}_legs.png`), tl);
+    writeImage(path.join(OUT, `walk_${tag}_legsonly.png`), tlo);
+    writeImage(path.join(OUT, `walk_${tag}_shoes.png`), tsh);
+    writeImage(path.join(OUT, `walk_${tag}_shoesswap.png`), tss);
+    if (i === 0) writeImage(path.join(OUT, 'walk_00_shoesidle.png'), tis);
+    writeImage(path.join(OUT, `walk_${tag}_torso.png`), tt);
+    writeImage(path.join(OUT, `walk_${tag}_armfar.png`), tf);
+    writeImage(path.join(OUT, `walk_${tag}_armnear.png`), tn);
+    frames.push(over(over(tf, tb), tn));
   }
 
   // 拼图预览
@@ -282,4 +318,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { makeLayers, anchors, render, renderArms, renderBody, toFinal };
+module.exports = { makeLayers, anchors, render, renderArms, renderBody, renderLegs, renderLegsOnly, renderShoes, renderTorso, toFinal };

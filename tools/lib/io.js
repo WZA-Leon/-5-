@@ -57,7 +57,16 @@ function writeImage(file, img, opts = {}) {
   const ext = path.extname(file).toLowerCase();
   if (ext === '.webp') {
     const ok = writeWebP(file, img, opts.quality || 92);
-    if (!ok) console.log(`[跳过] 没有可用的 ffmpeg/libwebp，未生成 ${path.basename(file)}（PNG 不受影响）`);
+    if (!ok) {
+      // 关键：不能留下旧的 webp。游戏优先加载 webp，若这里跳过却保留旧文件，
+      // 页面就会一直显示上一次构建的图，看起来像「改了没生效」。
+      if (fs.existsSync(file)) {
+        fs.rmSync(file);
+        console.log(`[删除] 没有可用的 ffmpeg/libwebp，已移除过期的 ${path.basename(file)}，游戏将使用新生成的 PNG`);
+      } else {
+        console.log(`[跳过] 没有可用的 ffmpeg/libwebp，未生成 ${path.basename(file)}（PNG 不受影响）`);
+      }
+    }
     return ok;
   }
   writePNG(file, img, opts.level || 6);

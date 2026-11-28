@@ -28,7 +28,10 @@ function main() {
   for (let i = 0; i < N; i++) {
     const tag = String(i).padStart(2, '0');
     const files = [
-      path.join(FRAMES, `walk_${tag}_body.png`),
+      path.join(FRAMES, `walk_${tag}_legsonly.png`),
+      path.join(FRAMES, `walk_${tag}_shoes.png`),
+      path.join(FRAMES, `walk_${tag}_shoesswap.png`),
+      path.join(FRAMES, `walk_${tag}_torso.png`),
       path.join(FRAMES, `walk_${tag}_armfar.png`),
       path.join(FRAMES, `walk_${tag}_armnear.png`),
     ];
@@ -38,12 +41,23 @@ function main() {
 
   // 列 0 站立（用第 0 帧），列 1..16 走路
   const cols = [frames[0], ...frames];
+  // 静止帧专用：前面那只鞋已镜像
+  const idleShoesSrc = readImage(path.join(FRAMES, 'walk_00_shoesidle.png'));
   const sheet = new Image(CELL_W * cols.length, CELL_H * 2);
-  cols.forEach(([body, far, near], c) => {
-    // 左键（上面那行）：保持现状
-    const top = over(over(far, body.flipH()), near);
-    // 按右键：右边的手移到左手位置，左边的手移到右手位置；身体不动
-    const bottom = over(over(far.flipH(), body), near.flipH());
+  cols.forEach(([legsonly, shoes, shoesSwap, torso, far, near], c) => {
+    const isIdle = c === 0;
+    // 静止帧：用镜像过的鞋；裤子画在鞋下面（鞋压在上面）
+    const idleShoes = idleShoesSrc;
+    const topShoes = isIdle ? idleShoes.flipH() : shoes;
+    const bottomShoes = isIdle ? idleShoes : shoes.flipH();
+    // 左键（上面那行）：身体镜像，腿用另一方向的腿
+    const top = isIdle
+      ? over(over(far, over(over(legsonly, topShoes), torso.flipH())), near)
+      : over(over(far, over(over(topShoes, legsonly), torso.flipH())), near);
+    // 按右键：右手移到左手位置、左手移到右手位置；身体不动；腿用另一方向的腿
+    const bottom = isIdle
+      ? over(over(far.flipH(), over(over(legsonly.flipH(), bottomShoes), torso)), near.flipH())
+      : over(over(far.flipH(), over(over(bottomShoes, legsonly.flipH()), torso)), near.flipH());
     sheet.copyInto(top, c * CELL_W, 0);
     sheet.copyInto(bottom, c * CELL_W, CELL_H);
   });

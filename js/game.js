@@ -84,7 +84,7 @@
   const SPRITE_FEET_RATIO = 452 / 460; // 精灵里脚底所在的比例（离单元格顶部）
 
   /* 精灵表：17 列（0 站立，1..16 走路循环），行 0 朝右、行 1 朝左（镜像） */
-  const SPRITE_SHEETS = ['assets/hero.webp?v=46', 'assets/hero.png?v=46'];
+  const SPRITE_SHEETS = ['assets/hero.webp?v=49', 'assets/hero.png?v=49'];
   const FRAME_COLS = 17;
   const FRAME_ROWS = 2;
   const IDLE_FRAME = 0;
@@ -94,7 +94,6 @@
   const MIN_STRIDE = 0.010;
   const MAX_STRIDE = 0.06;
   const SPEED = 150;
-  const RUN_MULT = 1.7;
 
   /* ---------------------------------------------------------------- DOM --- */
   const stage = document.getElementById('stage');
@@ -262,15 +261,16 @@
 
   /* --------------------------------------------------------------- 状态 --- */
   const state = {
-    heroX: 220,
+    // 出生在走廊右端，面朝左（走廊向前延伸的方向）
+    heroX: WORLD_W - 200,
     vx: 0,
-    dir: 1,
+    dir: -1,
     frame: IDLE_FRAME,
     frameTimer: 0, // 累积的「步数」，满 1 前进一帧
     moving: false,
     camX: 0,
     targetX: null,
-    keys: { left: false, right: false, run: false },
+    keys: { left: false, right: false },
     touchDir: 0,
     progress: 0,
     time: 0,
@@ -1005,7 +1005,8 @@
     const sw = sprite.naturalWidth / FRAME_COLS;
     const sh = sprite.naturalHeight / FRAME_ROWS;
     const sx = state.frame * sw;
-    const sy = (state.dir > 0 ? 0 : 1) * sh;
+    // 精灵表上面那行是「朝左」、下面那行是「朝右」，按移动方向选行
+    const sy = (state.dir > 0 ? 1 : 0) * sh;
     // 精灵里脚底在单元格 452/460 处，按这个比例贴到地面线上
     const top = HERO_FEET - HERO_H * SPRITE_FEET_RATIO;
     ctx.drawImage(sprite, sx, sy, sw, sh, state.heroX - HERO_W / 2, top, HERO_W, HERO_H);
@@ -1098,9 +1099,8 @@
 
   /* ------------------------------------------------------------- 输入 --- */
   const KEYMAP = {
-    ArrowLeft: 'right', KeyA: 'right',
-    ArrowRight: 'left', KeyD: 'left',
-    ShiftLeft: 'run', ShiftRight: 'run',
+    ArrowLeft: 'left', KeyA: 'left',
+    ArrowRight: 'right', KeyD: 'right',
   };
 
   window.addEventListener('keydown', (e) => {
@@ -1121,7 +1121,7 @@
   }, { passive: false });
 
   window.addEventListener('blur', () => {
-    state.keys.left = state.keys.right = state.keys.run = false;
+    state.keys.left = state.keys.right = false;
     state.touchDir = 0;
   });
 
@@ -1149,6 +1149,7 @@
   canvas.addEventListener('pointerdown', (e) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     const rect = canvas.getBoundingClientRect();
+    // 世界是按 -camX 平移绘制的，换算成世界坐标要加回来
     const worldX = (e.clientX - rect.left) / view.s + state.camX;
     state.targetX = clamp(worldX, 60, WORLD_W - 60);
     hideHint();
@@ -1218,7 +1219,7 @@
     if (dir !== 0) {
       state.dir = dir;
       state.targetX = null;
-      state.vx = dir * SPEED * (k.run ? RUN_MULT : 1);
+      state.vx = dir * SPEED;
     } else if (state.targetX !== null) {
       const d = state.targetX - state.heroX;
       if (Math.abs(d) < 5) {
@@ -1250,7 +1251,7 @@
         state.frameTimer = 0;
       }
 
-      const speedRatio = clamp(speed / SPEED, 0.35, RUN_MULT);
+      const speedRatio = clamp(speed / SPEED, 0.35, 1);
       const stepTime = clamp(STRIDE / speedRatio, MIN_STRIDE, MAX_STRIDE);
       state.frameTimer += dt / stepTime;
 
@@ -1349,7 +1350,7 @@
 
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        state.keys.left = state.keys.right = state.keys.run = false;
+        state.keys.left = state.keys.right = false;
         state.touchDir = 0;
       } else {
         last = performance.now();
