@@ -30,6 +30,9 @@ const SHOE_R_DY = 0;
 // 走路时身体的上下颠簸幅度（最终 320x460 画布上的像素）
 const BOB = 3;
 
+// 里侧（左）腿的髋部旋转轴再往外挪一点，外侧（右）腿的轴不动
+const HIP_L_SHIFT_X = -6; // 局部像素，负数 = 更靠左（远离外侧腿）
+
 function resizeXY(im, sx, sy) {
   return im.resize(
     Math.max(1, pyRound(im.width * sx)),
@@ -102,8 +105,8 @@ function anchors(L) {
   const tTl = [origin[0] - t.pivot[0], origin[1] - t.pivot[1]];
   const tp = (p) => [tTl[0] + p[0] * SCALE.torso, tTl[1] + p[1] * SCALE.torso];
 
-  const hipL = tp(ANCHOR.torso_hip_l);
-  const hipR = tp(ANCHOR.torso_hip_r);
+  const hipL = [tp(ANCHOR.torso_hip_l)[0] + HIP_L_SHIFT_X, tp(ANCHOR.torso_hip_l)[1]];
+  const hipR = tp(ANCHOR.torso_hip_r); // 外侧腿轴保持不动
   const sleeveL = tp(ANCHOR.torso_sleeve_l);
   const sleeveR = tp(ANCHOR.torso_sleeve_r);
   const ankleDy = (ANCHOR.leg_ankle[1] - ANCHOR.leg_hip[1]) * LEG_SY;
@@ -224,7 +227,7 @@ function renderArms(phase, ampArm = 12, which = 'both') {
   const L = makeLayers();
   const A = anchors(L);
   const canvas = blank();
-  const armUp = 6; // 两只手整体上移
+  const armUp = 11; // 两只手整体上移（再往上一点）
   if (which === 'both' || which === 'far') {
     draw(canvas, L.arm_l, [A.arm_l[0], A.arm_l[1] - armUp], ampArm * Math.sin(phase));
   }
