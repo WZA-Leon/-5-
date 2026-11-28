@@ -46,10 +46,11 @@ function main() {
   const sheet = new Image(CELL_W * cols.length, CELL_H * 2);
   cols.forEach(([legsonly, shoes, shoesSwap, torso, far, near], c) => {
     const isIdle = c === 0;
-    // 静止帧：用镜像过的鞋；裤子画在鞋下面（鞋压在上面）
-    const idleShoes = idleShoesSrc;
-    const topShoes = isIdle ? idleShoes.flipH() : shoes;
-    const bottomShoes = isIdle ? idleShoes : shoes.flipH();
+    // 静止帧用专门的一层（前后层已对调），走路帧用常规鞋层
+    const shoesSrc = isIdle ? idleShoesSrc : shoes;
+    // 走路和静止用同一套处理：上面那行鞋镜像，下面那行不镜像
+    const topShoes = shoesSrc.flipH();
+    const bottomShoes = shoesSrc;
     // 左键（上面那行）：身体镜像，腿用另一方向的腿
     const top = over(over(far, over(over(legsonly, topShoes), torso.flipH())), near);
     // 按右键：右手移到左手位置、左手移到右手位置；身体不动；裤腿在鞋下方

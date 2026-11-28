@@ -84,7 +84,7 @@
   const SPRITE_FEET_RATIO = 452 / 460; // 精灵里脚底所在的比例（离单元格顶部）
 
   /* 精灵表：17 列（0 站立，1..16 走路循环），行 0 朝右、行 1 朝左（镜像） */
-  const SPRITE_SHEETS = ['assets/hero.webp?v=51', 'assets/hero.png?v=51'];
+  const SPRITE_SHEETS = ['assets/hero.webp?v=54', 'assets/hero.png?v=54'];
   const FRAME_COLS = 17;
   const FRAME_ROWS = 2;
   const IDLE_FRAME = 0;

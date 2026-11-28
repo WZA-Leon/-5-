@@ -77,20 +77,20 @@ function makeLayers() {
     resizeXY(legRImg, LEG_SX, LEG_SY), // 外侧（右）腿保留条纹
     [(wR - ANCHOR.leg_hip[0]) * LEG_SX, ANCHOR.leg_hip[1] * LEG_SY]
   );
-  // p07 原图朝左，需要翻；p08 原图本来就朝右，不要再翻
-  const shoeLImg = load('shoe_l').flipH();
+  // 两只鞋都再水平翻一次：朝向整体反过来
+  const shoeLImg = load('shoe_l');
   const swL = shoeLImg.width;
   const shoeLScaled = resize(shoeLImg, SCALE.shoe);
   const shoeL = tightLayer(
     shoeLScaled,
-    [(swL - ANCHOR.shoe_ankle[0]) * SCALE.shoe, ANCHOR.shoe_ankle[1] * SCALE.shoe]
+    [ANCHOR.shoe_ankle[0] * SCALE.shoe, ANCHOR.shoe_ankle[1] * SCALE.shoe]
   );
-  const shoeRImg = load('shoe_r').flipH();
+  const shoeRImg = load('shoe_r');
   const swR = shoeRImg.width;
   const shoeRScaled = resize(shoeRImg, SCALE.shoe);
   const shoeR = tightLayer(
     shoeRScaled,
-    [(swR - ANCHOR.shoe_ankle[0]) * SCALE.shoe, ANCHOR.shoe_ankle[1] * SCALE.shoe]
+    [ANCHOR.shoe_ankle[0] * SCALE.shoe, ANCHOR.shoe_ankle[1] * SCALE.shoe]
   );
   layerCache = { torso, head, arm_l: armL, arm_r: armR, leg_l: legL, leg_r: legR, shoe_l: shoeL, shoe_r: shoeR };
   return layerCache;
@@ -284,8 +284,8 @@ function main() {
     const legsonly = toFinal(renderLegsOnly(p), idle.metrics); // 只有裤腿（不含鞋）
     const shoes = toFinal(renderShoes(p), idle.metrics); // 只有两只鞋
     const shoesSwap = toFinal(renderShoes(p, 26, true), idle.metrics); // 两只鞋前后层对调
-    // 静止帧用：前面那只鞋做左右镜像（其余不动）
-    const idleShoes = toFinal(renderShoes(p, 26, true, true), idle.metrics);
+    // 静止帧用：两只鞋朝向一致（不镜像），只保留前后层顺序
+    const idleShoes = toFinal(renderShoes(p, 26, true, false), idle.metrics);
     const torso = toFinal(renderTorso(), idle.metrics); // 躯干+头（单独一层）
     const far = toFinal(renderArms(p, 12, 'far'), idle.metrics);
     const near = toFinal(renderArms(p, 12, 'near'), idle.metrics);
