@@ -38,7 +38,7 @@ const ANCHOR = {
   arm_cuff: [30, 30],
   leg_hip: [35, 12],
   leg_ankle: [35, 165],
-  shoe_ankle: [65, 15], // v16 的状态
+  shoe_ankle: [40, 12], // 鞋口（深色开口）的实测中心，不是鞋尖
 };
 
 function load(name) {
