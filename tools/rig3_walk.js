@@ -22,9 +22,14 @@ const LEG_SX = 0.52;
 const LEG_SY = 0.84;
 
 // 鞋位置微调（局部像素；正数 = 右/下，负数 = 左/上）
-const SHOE_L_DX = 0;
+// 让鞋口中心对准裤脚中心（实测偏移量算出来的）
+const SHOE_ALIGN_L_DX = -2;
+const SHOE_ALIGN_R_DX = 1;
+// 再整体往人物朝向（局部 +x）方向挪 10 像素（局部 9px ≈ 最终 10px）
+const SHOE_FORWARD_DX = 9;
+const SHOE_L_DX = SHOE_ALIGN_L_DX + SHOE_FORWARD_DX;
 const SHOE_L_DY = 0;
-const SHOE_R_DX = 0;
+const SHOE_R_DX = SHOE_ALIGN_R_DX + SHOE_FORWARD_DX;
 const SHOE_R_DY = 0;
 
 // 走路时身体的上下颠簸幅度（最终 320x460 画布上的像素）
