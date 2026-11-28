@@ -33,7 +33,7 @@ const SHOE_R_DX = SHOE_ALIGN_R_DX + SHOE_FORWARD_DX;
 const SHOE_R_DY = 0;
 
 // 走路时身体的上下颠簸幅度（最终 320x460 画布上的像素）
-const BOB = 3;
+const BOB = 7;
 
 // 里侧（左）腿的髋部旋转轴再往外挪一点，外侧（右）腿的轴不动
 const HIP_L_SHIFT_X = -6; // 局部像素，负数 = 更靠左（远离外侧腿）
