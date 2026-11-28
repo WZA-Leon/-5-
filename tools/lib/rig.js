@@ -172,6 +172,16 @@ function buildLayers(cfg) {
     return [x * sx, rawY * sy];
   };
 
+  /**
+   * 取锚点：优先用分侧的 `<名字>_<l|r>`，没有就退回共用的 `<名字>`。
+   * 左右部件互为镜像时（比如 4.png 的鞋），两侧锚点本来就不同，必须能分开写。
+   */
+  const anchor = (base, side) => {
+    const v = a[`${base}_${side}`] || a[base];
+    if (!v) throw new Error(`缺少锚点 ${base}${side ? `_${side}` : ''}`);
+    return v;
+  };
+
   // 头 / 躯干
   layers.head = new Layer(
     resize(simple('head'), s.head),
@@ -187,9 +197,10 @@ function buildLayers(cfg) {
   // 手臂（绕袖口转）
   for (const side of ['l', 'r']) {
     const key = `arm_${side}`;
+    const cuff = anchor('arm_cuff', side);
     layers[key] = new Layer(
       resize(simple(key), s.arm),
-      pivotOf(key, a.arm_cuff[0], s.arm, a.arm_cuff[1], s.arm),
+      pivotOf(key, cuff[0], s.arm, cuff[1], s.arm),
       key
     );
   }
@@ -197,9 +208,10 @@ function buildLayers(cfg) {
   // 腿（绕髋转；x/y 可以不同比例，用来拉长腿）
   for (const side of ['l', 'r']) {
     const key = `leg_${side}`;
+    const hip = anchor('leg_hip', side);
     layers[key] = new Layer(
       resizeXY(simple(key), s.leg_x, s.leg_y),
-      pivotOf(key, a.leg_hip[0], s.leg_x, a.leg_hip[1], s.leg_y),
+      pivotOf(key, hip[0], s.leg_x, hip[1], s.leg_y),
       key
     );
   }
@@ -207,8 +219,9 @@ function buildLayers(cfg) {
   // 鞋（绕「鞋口」对齐裤脚；朝向由 parts.flip 决定，不再二次翻转）
   for (const side of ['l', 'r']) {
     const key = `shoe_${side}`;
+    const opening = anchor('shoe_opening', side);
     const scaled = resize(simple(key), s.shoe);
-    const pivot = pivotOf(key, a.shoe_opening[0], s.shoe, a.shoe_opening[1], s.shoe);
+    const pivot = pivotOf(key, opening[0], s.shoe, opening[1], s.shoe);
     layers[key] = cfg.shoe.tight_crop ? tightLayer(scaled, pivot) : new Layer(scaled, pivot, key);
     layers[key].name = key;
   }
@@ -228,7 +241,9 @@ function computeAnchors(cfg, L) {
   hipL[0] += cfg.leg.hip_shift_l_x; // 里侧腿轴可单独外移，外侧腿轴不动
   const sleeveL = tp(cfg.anchors.torso_sleeve_l);
   const sleeveR = tp(cfg.anchors.torso_sleeve_r);
-  const ankleDy = (cfg.anchors.leg_ankle[1] - cfg.anchors.leg_hip[1]) * cfg.scale.leg_y;
+  const legHip = cfg.anchors.leg_hip_l || cfg.anchors.leg_hip;
+  const legAnkle = cfg.anchors.leg_ankle_l || cfg.anchors.leg_ankle;
+  const ankleDy = (legAnkle[1] - legHip[1]) * cfg.scale.leg_y;
 
   return {
     origin,
@@ -554,9 +569,10 @@ function writeSheet(cfg, sheet) {
  */
 function measureAlignment(cfg) {
   const m = cfg.measure || {};
-  const band = m.band || 14;
+  const maxBand = m.band || 14;
   const cuffBand = m.cuffBand || 10;
   const dark = m.dark || 70;
+  const jump = m.jump || 1.6;
 
   const info = (name) => {
     const img = loadPart(cfg, name);
@@ -580,12 +596,40 @@ function measureAlignment(cfg) {
     return n ? sx / n : NaN;
   };
 
+  /**
+   * 鞋口 = 鞋顶部那段「又窄又暗」的开口。
+   *
+   * 不能简单取顶部 N 行的暗色重心：鞋身本身也有暗部，行数取多了重心就被鞋面拽偏
+   * （4.png 的鞋就是这样，直接量会偏出 20 多像素）。
+   * 这里先找出开口结束的行 —— 从最顶上开始，第一行宽度突然变宽（> 顶部宽度 × jump）就停，
+   * 再在这几行里取暗色重心。
+   */
   const openingCenter = (im) => {
     const d = im.img.data;
     const W = im.img.width;
+    const H = im.h;
+    const span = (y) => {
+      let a = -1;
+      let b = -1;
+      for (let x = 0; x < W; x++) {
+        if (d[(y * W + x) * 4 + 3] > 8) {
+          if (a < 0) a = x;
+          b = x;
+        }
+      }
+      return b < 0 ? 0 : b - a + 1;
+    };
+    const topW = span(0);
+    let end = Math.min(maxBand, H);
+    for (let y = 1; y < end; y++) {
+      if (span(y) > topW * jump) {
+        end = y;
+        break;
+      }
+    }
     let sx = 0;
     let n = 0;
-    for (let y = 0; y < band && y < im.h; y++) {
+    for (let y = 0; y < end; y++) {
       for (let x = 0; x < W; x++) {
         const o = (y * W + x) * 4;
         if (d[o + 3] <= 8) continue;
@@ -596,7 +640,7 @@ function measureAlignment(cfg) {
         }
       }
     }
-    return n ? sx / n : NaN;
+    return { cx: n ? sx / n : NaN, rows: end, topWidth: topW };
   };
 
   const out = {};
@@ -604,17 +648,21 @@ function measureAlignment(cfg) {
     const leg = info(`leg_${side}`);
     const shoe = info(`shoe_${side}`);
     const rawCuff = cuffCenter(leg, cuffBand);
-    const rawOpen = openingCenter(shoe);
+    const open = openingCenter(shoe);
+    const rawOpen = open.cx;
     // 翻转过的部件，x 要镜像回来
     const cuffX = leg.flipped ? leg.w - rawCuff : rawCuff;
     const openX = shoe.flipped ? shoe.w - rawOpen : rawOpen;
-    const hipX = cfg.anchors.leg_hip[0];
-    const pivotX = cfg.anchors.shoe_opening[0];
+    const hipAnchor = cfg.anchors[`leg_hip_${side}`] || cfg.anchors.leg_hip;
+    const openAnchor = cfg.anchors[`shoe_opening_${side}`] || cfg.anchors.shoe_opening;
+    const hipX = hipAnchor[0];
+    const pivotX = openAnchor[0];
     const cuffLocal = (cuffX - (leg.flipped ? leg.w - hipX : hipX)) * cfg.scale.leg_x;
     const openLocal = (openX - (shoe.flipped ? shoe.w - pivotX : pivotX)) * cfg.scale.shoe;
     out[side] = {
       cuffRaw: rawCuff,
       openRaw: rawOpen,
+      openRows: open.rows,
       cuffLocal,
       openLocal,
       alignDx: cuffLocal - openLocal,

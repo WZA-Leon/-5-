@@ -13,11 +13,13 @@
     "serve": "node tools/serve.js",
     "build": "node tools/rig_pipeline.js hero",
     "build:hero": "node tools/rig_pipeline.js hero",
+    "build:hero4": "node tools/rig_pipeline.js hero4",
     "rig": "node tools/rig_pipeline.js",
     "rig:list": "node tools/rig_pipeline.js --list",
     "rig:report": "node tools/rig_pipeline.js hero --report",
     "rig:measure": "node tools/rig_pipeline.js hero --measure",
     "rig:init": "node tools/rig_pipeline.js --init",
+    "preview": "node tools/preview_character.js hero4 hero",
     "stage": "node tools/stage_web.js",
     "check": "node tools/check_project.js"
   }
