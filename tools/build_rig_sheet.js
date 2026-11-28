@@ -51,13 +51,9 @@ function main() {
     const topShoes = isIdle ? idleShoes.flipH() : shoes;
     const bottomShoes = isIdle ? idleShoes : shoes.flipH();
     // 左键（上面那行）：身体镜像，腿用另一方向的腿
-    const top = isIdle
-      ? over(over(far, over(over(legsonly, topShoes), torso.flipH())), near)
-      : over(over(far, over(over(topShoes, legsonly), torso.flipH())), near);
-    // 按右键：右手移到左手位置、左手移到右手位置；身体不动；腿用另一方向的腿
-    const bottom = isIdle
-      ? over(over(far.flipH(), over(over(legsonly.flipH(), bottomShoes), torso)), near.flipH())
-      : over(over(far.flipH(), over(over(bottomShoes, legsonly.flipH()), torso)), near.flipH());
+    const top = over(over(far, over(over(legsonly, topShoes), torso.flipH())), near);
+    // 按右键：右手移到左手位置、左手移到右手位置；身体不动；裤腿在鞋下方
+    const bottom = over(over(far.flipH(), over(over(legsonly.flipH(), bottomShoes), torso)), near.flipH());
     sheet.copyInto(top, c * CELL_W, 0);
     sheet.copyInto(bottom, c * CELL_W, CELL_H);
   });

@@ -27,12 +27,23 @@ const SHOE_L_DY = 0;
 const SHOE_R_DX = 0;
 const SHOE_R_DY = 0;
 
+// 走路时身体的上下颠簸幅度（最终 320x460 画布上的像素）
+const BOB = 3;
+
 function resizeXY(im, sx, sy) {
   return im.resize(
     Math.max(1, pyRound(im.width * sx)),
     Math.max(1, pyRound(im.height * sy)),
     sx < 1 ? 'area' : 'lanczos4'
   );
+}
+
+// 鞋只保留自身的紧致小矩形，不带周围多余透明区域；同时修正锚点坐标。
+function tightLayer(im, pivot) {
+  const b = im.bbox(0);
+  if (b.x1 < b.x0 || b.y1 < b.y0) return new Layer(im, pivot);
+  const crop = im.crop(b.x0, b.y0, b.x1 - b.x0 + 1, b.y1 - b.y0 + 1);
+  return new Layer(crop, [pivot[0] - b.x0, pivot[1] - b.y0]);
 }
 
 let layerCache = null;
@@ -69,14 +80,16 @@ function makeLayers() {
   // p07 原图朝左，需要翻；p08 原图本来就朝右，不要再翻
   const shoeLImg = load('shoe_l').flipH();
   const swL = shoeLImg.width;
-  const shoeL = new Layer(
-    resize(shoeLImg, SCALE.shoe),
+  const shoeLScaled = resize(shoeLImg, SCALE.shoe);
+  const shoeL = tightLayer(
+    shoeLScaled,
     [(swL - ANCHOR.shoe_ankle[0]) * SCALE.shoe, ANCHOR.shoe_ankle[1] * SCALE.shoe]
   );
   const shoeRImg = load('shoe_r').flipH();
   const swR = shoeRImg.width;
-  const shoeR = new Layer(
-    resize(shoeRImg, SCALE.shoe),
+  const shoeRScaled = resize(shoeRImg, SCALE.shoe);
+  const shoeR = tightLayer(
+    shoeRScaled,
     [(swR - ANCHOR.shoe_ankle[0]) * SCALE.shoe, ANCHOR.shoe_ankle[1] * SCALE.shoe]
   );
   layerCache = { torso, head, arm_l: armL, arm_r: armR, leg_l: legL, leg_r: legR, shoe_l: shoeL, shoe_r: shoeR };
@@ -110,11 +123,13 @@ function blank() {
   return new Image(W, H);
 }
 
-function draw(canvas, layer, target, angle = 0) {
+function draw(canvas, layer, target, angle = 0, center = null) {
   let tmp = blank();
   place(tmp, layer, target);
   if (Math.abs(angle) > 1e-6) {
-    const M = getRotationMatrix2D(target[0], target[1], angle, 1);
+    // center 缺省时绕目标点旋转；传入 center 则绕该点旋转（与腿共用旋转中心）
+    const c = center || target;
+    const M = getRotationMatrix2D(c[0], c[1], angle, 1);
     tmp = warpAffine(tmp, M, W, H);
   }
   canvas.pasteOver(tmp, 0, 0);
@@ -156,22 +171,25 @@ function renderShoes(phase, ampLeg = 26, swapOrder = false, mirrorFront = false)
   const L = makeLayers();
   const A = anchors(L);
   const [lAngle, rAngle] = legAngles(phase, ampLeg);
-  const ankleL = rotatePoint([A.hip_l[0], A.hip_l[1] + A.ankle_dy], A.hip_l, lAngle);
-  const ankleR = rotatePoint([A.hip_r[0], A.hip_r[1] + A.ankle_dy], A.hip_r, rAngle);
+  // 鞋挂在脚踝上，随腿一起绕「腿的旋转中心」（髋部）转动，和腿是同一根刚体。
+  const restAnkleL = [A.hip_l[0], A.hip_l[1] + A.ankle_dy];
+  const restAnkleR = [A.hip_r[0], A.hip_r[1] + A.ankle_dy];
   const canvas = blank();
   // swapOrder=false：先左后右，右鞋在前；swapOrder=true：先右后左，左鞋在前
   const frontIsLeft = swapOrder;
   const shoeL = mirrorFront && frontIsLeft ? mirrorLayer(L.shoe_l) : L.shoe_l;
   const shoeR = mirrorFront && !frontIsLeft ? mirrorLayer(L.shoe_r) : L.shoe_r;
-  const left = () => draw(canvas, shoeL, [ankleL[0] + SHOE_L_DX, ankleL[1] + SHOE_L_DY], 0);
-  const right = () => draw(canvas, shoeR, [ankleR[0] + SHOE_R_DX, ankleR[1] + SHOE_R_DY], 0);
+  const left = () =>
+    draw(canvas, shoeL, [restAnkleL[0] + SHOE_L_DX, restAnkleL[1] + SHOE_L_DY], lAngle, A.hip_l);
+  const right = () =>
+    draw(canvas, shoeR, [restAnkleR[0] + SHOE_R_DX, restAnkleR[1] + SHOE_R_DY], rAngle, A.hip_r);
   if (swapOrder) { right(); left(); } else { left(); right(); }
   return canvas;
 }
 
 function renderLegs(phase, ampLeg = 26) {
-  // 裤腿 + 两只鞋（鞋在裤腿下面，裤脚盖住鞋口）
-  return over(renderShoes(phase, ampLeg), renderLegsOnly(phase, ampLeg));
+  // 裤腿在下、鞋在上；鞋口与裤腿共用脚踝锚点。
+  return over(renderLegsOnly(phase, ampLeg), renderShoes(phase, ampLeg));
 }
 
 function renderShoe(side, phase, ampLeg = 26) {
@@ -272,20 +290,27 @@ function main() {
     const far = toFinal(renderArms(p, 12, 'far'), idle.metrics);
     const near = toFinal(renderArms(p, 12, 'near'), idle.metrics);
     const tag = String(i).padStart(2, '0');
-    // 脚底贴地：用身体最低点，整帧上下移动
+    // 脚底贴地：用身体最低点，整帧上下移动（腿和鞋始终踩在地上）
     const b = body.bbox(0);
     const bottom = b.y1;
     const dy = 452 - bottom;
     const mv = (img) => (dy ? translate(img, dy) : img);
+    // 上下颠簸：只让上半身（躯干+头+手）起伏，脚保持贴地；
+    // 双腿分开（接触地面）时重心最低，并拢时最高，静止帧为 0。
+    const bob = Math.round(BOB * Math.abs(Math.sin(p)));
+    const mvUp = (img) => {
+      const base = mv(img);
+      return bob ? translate(base, bob) : base;
+    };
     const tb = mv(body);
     const tl = mv(legs);
     const tlo = mv(legsonly);
     const tsh = mv(shoes);
     const tss = mv(shoesSwap);
     const tis = mv(idleShoes);
-    const tt = mv(torso);
-    const tf = mv(far);
-    const tn = mv(near);
+    const tt = mvUp(torso);
+    const tf = mvUp(far);
+    const tn = mvUp(near);
     writeImage(path.join(OUT, `walk_${tag}_body.png`), tb);
     writeImage(path.join(OUT, `walk_${tag}_legs.png`), tl);
     writeImage(path.join(OUT, `walk_${tag}_legsonly.png`), tlo);
