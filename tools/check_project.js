@@ -50,6 +50,9 @@ for (const rel of [
   'package.json',
   'assets/hero.png',
   'tools/lib/paths.js',
+  'tools/lib/rig.js',
+  'tools/rig_pipeline.js',
+  'tools/characters/hero.json',
   'tools/build_rig_sheet.js',
   'tools/serve.js',
   'roles/SJY/img (8).png',
@@ -60,7 +63,7 @@ for (const rel of [
 for (let i = 0; i < 16; i++) {
   const tag = String(i).padStart(2, '0');
   for (const layer of ['body', 'armfar', 'armnear']) {
-    requireFile(path.join('tools', 'ref', 'rig', 'rig3', `walk_${tag}_${layer}.png`));
+    requireFile(path.join('tools', 'ref', 'rig', 'hero', `walk_${tag}_${layer}.png`));
   }
 }
 for (const dir of [path.join('tools', '__pycache__')]) {
@@ -144,6 +147,36 @@ if (!exists('assets/hero.webp')) {
 } else if (fs.statSync(webpPath).mtimeMs < fs.statSync(pngPath).mtimeMs) {
   // 游戏优先加载 webp；webp 比 png 旧就说明它会盖掉新构建的图
   fail('assets/hero.webp is older than assets/hero.png: rebuild or delete it, otherwise the page shows stale art');
+}
+
+/* ------------------------------------------------- 7. 角色配置可加载 --- */
+try {
+  const { listCharacters, loadConfig } = require('./lib/rig');
+  const ids = listCharacters();
+  if (!ids.length) fail('tools/characters 下没有任何角色配置');
+  for (const id of ids) {
+    let cfg;
+    try {
+      cfg = loadConfig(id);
+    } catch (err) {
+      fail(`角色配置 ${id} 无法加载：${err.message}`);
+      continue;
+    }
+    for (const [name, file] of Object.entries(cfg.parts.files)) {
+      const p = path.join(cfg.partsDir, file);
+      if (!fs.existsSync(p)) fail(`角色 ${id} 缺少部件 ${name}：${path.relative(ROOT, p)}`);
+    }
+    const { rows, sheet } = cfg;
+    if (rows.length !== sheet.rows) fail(`角色 ${id}：rows 声明 ${rows.length} 行，sheet.rows 是 ${sheet.rows}`);
+    for (const row of rows) {
+      const flat = JSON.stringify(row.layers);
+      for (const need of ['legsonly', 'shoes', 'torso', 'armfar', 'armnear']) {
+        if (!flat.includes(`"${need}"`)) fail(`角色 ${id}：行「${row.name}」缺少图层 ${need}`);
+      }
+    }
+  }
+} catch (err) {
+  fail(`角色配置检查失败：${err.message}`);
 }
 
 /* ------------------------------------------------------------- 输出 --- */

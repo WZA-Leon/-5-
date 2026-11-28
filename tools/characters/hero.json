@@ -1,0 +1,146 @@
+{
+  "id": "hero",
+  "name": "主角（课间十分钟）",
+  "note": "所有数值都来自实测：鞋口 = 鞋顶部深色开口的重心，裤脚 = 裤腿底部若干行的重心。换角色时只改这个文件。",
+
+  "parts": {
+    "dir": "tools/ref/rig/sheet3",
+    "files": {
+      "head": "p01_x63_y462.png",
+      "torso": "p02_x378_y474.png",
+      "arm_l": "p03_x636_y483.png",
+      "arm_r": "p04_x853_y483.png",
+      "leg_l": "p05_x134_y741.png",
+      "leg_r": "p06_x399_y744.png",
+      "shoe_l": "p07_x614_y846.png",
+      "shoe_r": "p08_x832_y846.png"
+    },
+    "flip": {
+      "head": false,
+      "torso": false,
+      "arm_l": false,
+      "arm_r": false,
+      "leg_l": false,
+      "leg_r": true,
+      "shoe_l": false,
+      "shoe_r": false
+    },
+    "removeStripe": ["leg_l"]
+  },
+
+  "anchors": {
+    "head_neck": [125, 190],
+    "torso_collar": [68, 10],
+    "torso_sleeve_l": [30, 82],
+    "torso_sleeve_r": [108, 82],
+    "torso_hip_l": [45, 175],
+    "torso_hip_r": [95, 175],
+    "arm_cuff": [30, 30],
+    "leg_hip": [35, 12],
+    "leg_ankle": [35, 165],
+    "shoe_opening": [40, 12]
+  },
+
+  "scale": {
+    "head": 0.64,
+    "torso": 0.66,
+    "arm": 0.52,
+    "shoe": 0.6,
+    "leg_x": 0.52,
+    "leg_y": 0.84
+  },
+
+  "stage": {
+    "w": 400,
+    "h": 600,
+    "origin": [200, 200],
+    "head_dy": 10
+  },
+
+  "arm": {
+    "amp": 12,
+    "up": 11,
+    "offset_l_x": -4,
+    "offset_r_x": 3
+  },
+
+  "leg": {
+    "amp": 26,
+    "hip_shift_l_x": -6
+  },
+
+  "shoe": {
+    "tight_crop": true,
+    "rotate_with_leg": true,
+    "align_dx": { "l": -2, "r": 1 },
+    "forward_dx": 9,
+    "dy": { "l": 0, "r": 0 }
+  },
+
+  "bob": 7,
+
+  "cell": {
+    "w": 320,
+    "h": 460,
+    "ground_y": 452,
+    "body_h": 408,
+    "crop": [70, 80, 330, 465]
+  },
+
+  "sheet": {
+    "png": "assets/hero.png",
+    "webp": "assets/hero.webp",
+    "webp_quality": 92,
+    "frames": 16,
+    "cols": 17,
+    "rows": 2
+  },
+
+  "layerVariants": {
+    "shoesidle": { "kind": "shoes", "swapOrder": true, "mirrorFront": false }
+  },
+
+  "rows": [
+    {
+      "name": "朝左（上行）",
+      "layers": [
+        {
+          "group": [
+            { "src": "armfar" },
+            {
+              "group": [
+                { "src": "legsonly" },
+                { "src": "shoes", "flip": true },
+                { "src": "torso", "flip": true }
+              ]
+            }
+          ]
+        },
+        { "src": "armnear" }
+      ]
+    },
+    {
+      "name": "朝右（下行）",
+      "layers": [
+        {
+          "group": [
+            { "src": "armfar", "flip": true },
+            {
+              "group": [
+                { "src": "legsonly", "flip": true },
+                { "src": "shoes" },
+                { "src": "torso" }
+              ]
+            }
+          ]
+        },
+        { "src": "armnear", "flip": true }
+      ]
+    }
+  ],
+
+  "idle": {
+    "useFrame": 0,
+    "override": { "shoes": "shoesidle" }
+  }
+}
