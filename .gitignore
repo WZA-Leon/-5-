@@ -1,10 +1,22 @@
-__pycache__/
-venv
-temp/ 
+# 零依赖 Node 工具（无需 npm install）
+node_modules/
+dist/
+.cache/
+.tmp/
+temp/
 
+# Tauri 构建产物（未来接入时）
+src-tauri/target/
+src-tauri/gen/
+
+# 运行时与本地文件
+runtime/
 len/
 *.len
 *.txt
 *.cmd
+*.log
 .vscode/
-runtime/
+.DS_Store
+Thumbs.db
+*.err

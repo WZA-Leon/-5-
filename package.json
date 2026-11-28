@@ -1,0 +1,19 @@
+{
+  "name": "corridor-walk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "课间十分钟 · 走廊漫步：纯 JS Canvas 游戏 + 零依赖 Node 构建工具",
+  "license": "MIT",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node tools/serve.js",
+    "serve": "node tools/serve.js",
+    "build": "node tools/build_rig_sheet.js",
+    "build:hero": "node tools/build_rig_sheet.js",
+    "stage": "node tools/stage_web.js",
+    "check": "node tools/check_project.js"
+  }
+}

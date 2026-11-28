@@ -4,27 +4,27 @@
    150,
    330
   ],
-  "area": 34353
+  "area": 34352
  },
  "leg_far": {
   "pivot": [
    131,
    336
   ],
-  "area": 4919
+  "area": 4923
  },
  "leg_near": {
   "pivot": [
    166,
    336
   ],
-  "area": 5135
+  "area": 5121
  },
  "foot_near": {
   "pivot": [
    225,
    424
   ],
-  "area": 1555
+  "area": 1549
  }
 }
